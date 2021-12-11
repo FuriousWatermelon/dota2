@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Page Title</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<style type="text/css">
+/* reference: https://www.w3schools.com/howto/howto_js_tabs.asp */
+
+.tab {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #f1f1f1;
+}
+
+.tab button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+}
+
+.tab button:hover {
+  background-color: #ddd;
+}
+
+.tab button.active {
+  background-color: #ccc;
+}
+
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-top: none;
+}
+</style>
+</head>
+<body>
+  <div class="tab">
+      <button class="tablinks" id="v1">Game Network</button>
+      <button class="tablinks" id="v2">Get To Know Hero </button>
+      <button class="tablinks" id="v3">Win or Lose</button>
+ </div>
+  <br>
+  <br>
+  <div id="pagearea">
+    </div>
+
+
+<script>
+  $(document).ready(function() {
+    $("#v1").on("click", function() {
+      console.log("click v1");
+      $("#pagearea").empty();
+      $("#pagearea").load("./visualization1.html");
+    });
+    $("#v2").on("click", function() {
+      console.log("click v2");
+      $("#pagearea").empty();
+      $("#pagearea").load("./visualization2.html");
+    });
+    $("#v3").on("click", function() {
+      console.log("click v3");
+      $("#pagearea").empty();
+      $("#pagearea").load("./visualization3.html");
+    });
+  })
+</script>
+
+</body>
+</html>

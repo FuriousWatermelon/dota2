@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="../lib/d3.v5.min.js"></script>
+    <title>Visualization 3</title>
+    <style>
+
+        /* axis text */
+        .axis text {
+            fill: #2b2929;
+            font-size: 120%;
+        }
+
+        @media print {
+            .pagebreak {
+                page-break-before: always;
+            }
+
+            /* page-break-after works, as well */
+        }
+
+        .image-border-off {
+            fill: transparent;
+            stroke: transparent;
+            stroke-width: 1.5px;
+            shape-rendering: crispEdges;
+        }
+
+        .image-border-on-1 {
+            fill: transparent;
+            stroke: #0066cc;
+            stroke-width: 5px;
+            shape-rendering: crispEdges;
+        }
+
+        .image-border-on-2 {
+            fill: transparent;
+            stroke: #cc0066;
+            stroke-width: 5px;
+            shape-rendering: crispEdges;
+        }
+
+        #tooltip {
+            position: absolute;
+            width: 200px;
+            height: auto;
+            padding: 10px;
+            background-color: white;
+            -webkit-border-radius: 10px;
+            -moz-border-radius: 10px;
+            border-radius: 10px;
+            -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+            -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+            box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+            pointer-events: none;
+        }
+
+        #tooltip.hidden {
+            display: none;
+        }
+
+        #tooltip p {
+            margin: 0;
+            font-family: sans-serif;
+            font-size: 16px;
+            line-height: 20px;
+        }
+    </style>
+</head>
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
+
+<head>
+    <!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Editor msdt:dt="string">Hull, Matthew D</mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Editor>
+<mso:xd_Signature msdt:dt="string"></mso:xd_Signature>
+<mso:Order msdt:dt="string">35500.0000000000</mso:Order>
+<mso:ComplianceAssetId msdt:dt="string"></mso:ComplianceAssetId>
+<mso:TemplateUrl msdt:dt="string"></mso:TemplateUrl>
+<mso:xd_ProgID msdt:dt="string"></mso:xd_ProgID>
+<mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Author msdt:dt="string">Hull, Matthew D</mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Author>
+<mso:ContentTypeId msdt:dt="string">0x010100D48F87729E805A4096AD64C4E51DACBE</mso:ContentTypeId>
+<mso:_SourceUrl msdt:dt="string"></mso:_SourceUrl>
+<mso:_SharedFileIndex msdt:dt="string"></mso:_SharedFileIndex>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+    <title></title>
+</head>
+<div id="top_area"></div>
+<div id="middle_area"></div>
+<div id="bottom_area"></div>
+
+<body>
+<script src="./js/hero_chart.js"></script>
+<script src="./js/gauge_chart.js"></script>
+<script src="./js/team_chart.js"></script>
+<script src="./js/spider_chart.js"></script>
+<script src="./js/visualization3.js"></script>
+</body>
+</html>

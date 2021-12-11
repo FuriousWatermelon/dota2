@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<script type="text/javascript" src="../lib/d3.v5.min.js"></script>
+<script type="text/javascript" src="../lib/d3-dsv.min.js"></script>
+<script type="text/javascript" src="../lib/d3-geo-projection.v2.min.js"></script>
+<script type="text/javascript" src="../lib/d3-legend.min.js"></script>
+<script type="text/javascript" src="../lib/d3-tip.min.js"></script>
+<style>
+  path.link {
+    fill: none;
+    stroke: gray;
+    stroke-width: 1.5px;
+  }
+
+  circle {
+    stroke: gray;
+    stroke-width: 1.5;
+  }
+
+  text {
+    fill: #000;
+    font: 10px sans-serif;
+    pointer-events: none;
+  }
+
+  .d3-tip {
+    line-height: 1;
+    padding: 12px;
+    background: rgba(43, 43, 43, 0.8);
+    color: #fff;
+    border-radius: 2px;
+  }
+
+  span {
+    display: inline-block;
+    vertical-align: middle;
+    line-height: normal;
+  }
+</style>
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
+
+<head>
+  <!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Editor msdt:dt="string">Hull, Matthew D</mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Editor>
+<mso:xd_Signature msdt:dt="string"></mso:xd_Signature>
+<mso:Order msdt:dt="string">35500.0000000000</mso:Order>
+<mso:ComplianceAssetId msdt:dt="string"></mso:ComplianceAssetId>
+<mso:TemplateUrl msdt:dt="string"></mso:TemplateUrl>
+<mso:xd_ProgID msdt:dt="string"></mso:xd_ProgID>
+<mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Author msdt:dt="string">Hull, Matthew D</mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Author>
+<mso:ContentTypeId msdt:dt="string">0x010100D48F87729E805A4096AD64C4E51DACBE</mso:ContentTypeId>
+<mso:_SourceUrl msdt:dt="string"></mso:_SourceUrl>
+<mso:_SharedFileIndex msdt:dt="string"></mso:_SharedFileIndex>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+  <title></title>
+</head>
+
+<body>
+  <label for="games">Select Interested Accound ID:</label>
+  <select name="games" id="games">
+  </select>
+  <div id="figure1"></div>
+  <script>
+
+    Promise.all([
+      d3.csv("./data/edges_v2.csv"), d3.csv("./data/nodes.csv")
+    ]).then(values => { ready(values[0], values[1]); }
+    ).catch(function (error) {
+      console.log(error);
+    });
+
+    function ready(edges, nodes_id) {
+      var links = edges;
+      var edge_nodes = {};
+
+      // enter code to append the id options to the dropdown
+      var select = d3.select('select')
+        .on("change", dropdownChange);
+      var options = select
+        .selectAll('option')
+        .data(nodes_id).enter()
+        .append('option')
+        .text(function (d) {
+          return d.account_id;
+        });
+
+      // compute the distinct nodes from the links.
+      links.forEach(function (link) {
+        link.source = edge_nodes[link.source] || (edge_nodes[link.source] = { name: link.source });
+        link.target = edge_nodes[link.target] || (edge_nodes[link.target] = { name: link.target });
+      });
+
+      links.forEach(function (d) {
+        var sourceTemp = d.source, targetTemp = d.target;
+        if (parseInt(d.source.name) > parseInt(d.target.name)) {
+          d.source = targetTemp;
+          d.target = sourceTemp;
+        }
+      });
+
+      links = removeDups(links);
+
+      for (let key in edge_nodes) {
+        // console.log(edge_nodes[key]);
+        var node_property = nodes_id.filter(item => item.account_id == key);
+        edge_nodes[key].property = node_property[0];
+      };
+
+      var margin = { top: 0, right: 0, bottom: 0, left: 0 }
+        , width = window.innerWidth - margin.left - margin.right // Use the window's width
+        , height = window.innerHeight - margin.top - margin.bottom; // Use the window's height
+
+      var force = d3.forceSimulation()
+        .nodes(d3.values(edge_nodes))
+        .force("link", d3.forceLink(links).distance(100))
+        .force('center', d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2))
+        .force("x", d3.forceX())
+        .force("y", d3.forceY())
+        .force("charge", d3.forceManyBody().strength(-200))
+        .alphaTarget(1)
+        .on("tick", tick);
+
+      var svg = d3.select("#figure1").append("svg")
+        .attr("width", window.innerWidth)
+        .attr("height", window.innerHeight*0.9);
+
+      // enter code to define tooltip
+      var tip = d3.tip()
+        .attr('class', 'd3-tip')
+        .offset([-5, 0])
+        .html(function (d) {
+          var path = '/image/small/' + d.property.hero_name.toLowerCase().replace(/ /g, "_") + '_sb.png';
+          return "<p><strong>Total Match: </strong>" + d.property.total_matches + "</p>" +
+            "<p><strong>Favoriate Hero: </strong>" + d.property.hero_name + " " +
+            "<span class=\"img-container\"><img src=\"" + path + "\"></span></p>" +
+            "<p><strong>Matchmaking Rating: </strong>" + Math.round(parseFloat(d.property.trueskill_mu)) + "</p>" +
+            "<p><strong>Win Rate: </strong>" + Math.round(parseFloat(d.property.win_rate) * 100) + "%</p>";
+        })
+      svg.call(tip);
+
+      // add the links
+      var path = svg.append("g")
+        .selectAll("path")
+        .data(links)
+        .enter()
+        .append("path")
+        .attr("class", function (d) {
+          return "link";
+        });
+
+      // define the nodes
+      var node = svg.selectAll(".node")
+        .data(force.nodes())
+        .enter().append("g")
+        .attr("class", "node")
+        .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended)
+        )
+        .on("dblclick", doubleclicked)
+        .on('mouseover', tip.show)
+        .on('mouseout', tip.hide);
+
+      // add the nodes
+      node.append("circle")
+        .attr("r", function (d) {
+
+          d.weight = d.property.total_matches;
+          d.rank = d.property.trueskill_mu
+          d.fixed = false;
+          var minRadius = 10;
+          var maxRadius = 30;
+          if (minRadius + (d.weight * 0.3 - 60) >= maxRadius) {
+            return maxRadius;
+          }
+          else if (minRadius + (d.weight * 0.3 - 60) < minRadius) {
+            return minRadius;
+          }
+          else {
+            return minRadius + (d.weight * 0.3 - 60);
+          }
+        });
+
+      var minValue = d3.min(Object.values(edge_nodes), function (d) { return d.rank; }),
+        maxValue = d3.max(Object.values(edge_nodes), function (d) { return d.rank; });
+
+      var colors = d3.scaleSequential().domain([minValue, maxValue])
+        .interpolator(d3.interpolatePuRd);
+      node.style("fill", function (d) { return colors(d.rank); });
+
+
+      // add the labels
+      node.append("text")
+        .attr("text-anchor", "middle")
+        .attr('alignment-baseline', 'middle')
+        .attr("dx", 0)
+        .attr("dy", 0)
+        .style('font', "15px sans-serif")
+        .style("font-weight", "bold")
+        .text(function (d) { return d.name });
+
+      // add the curvy lines
+      function tick() {
+        path.attr("d", function (d) {
+          var dx = d.target.x - d.source.x,
+            dy = d.target.y - d.source.y,
+            dr = Math.sqrt(dx * dx + dy * dy) * 2;
+          return "M" +
+            d.source.x + "," +
+            d.source.y + "A" +
+            dr + "," + dr + " 0 0,1 " +
+            d.target.x + "," +
+            d.target.y;
+        });
+
+        node.attr("transform", function (d) {
+          return "translate(" + d.x + "," + d.y + ")";
+        });
+      };
+
+      var w = 100, h = 20, loc_from_right = 150, loc_from_top = 20;
+      // var inner_svg= svg.append("svg")
+      //     .attr("width", width)
+      //     .attr("height", height);
+
+      var legend = svg.append("defs")
+        .append("svg:linearGradient")
+        .attr("id", "gradient")
+        .attr("x1", "0%")
+        .attr("y1", "100%")
+        .attr("x2", "100%")
+        .attr("y2", "100%")
+        .attr("spreadMethod", "pad");
+
+      legend.append("stop")
+        .attr("offset", "0%")
+        .attr("stop-color", d3.interpolatePuRd(0))
+        .attr("stop-opacity", 1);
+
+      legend.append("stop")
+        .attr("offset", "33%")
+        .attr("stop-color", d3.interpolatePuRd(0.33))
+        .attr("stop-opacity", 1);
+
+      legend.append("stop")
+        .attr("offset", "66%")
+        .attr("stop-color", d3.interpolatePuRd(0.66))
+        .attr("stop-opacity", 1);
+
+      legend.append("stop")
+        .attr("offset", "100%")
+        .attr("stop-color", d3.interpolatePuRd(1))
+        .attr("stop-opacity", 1);
+
+      svg.append("rect")
+        .attr("width", w)
+        .attr("height", h)
+        .attr("x", width - loc_from_right)
+        .attr("y", loc_from_top)
+        .style("fill", "url(#gradient)")
+        .attr("transform", "translate(0,10)");
+
+      svg.append("text")
+        .attr("text-anchor", "start")
+        .attr("x", width - loc_from_right)
+        .attr("y", loc_from_top)
+        .text("Low")
+        .style("font", "15px sans-serif")
+        .style("font-weight", "bold");
+      svg.append("text")
+        .attr("text-anchor", "end")
+        .attr("x", width - loc_from_right + w)
+        .attr("y", loc_from_top)
+        .text("High")
+        .style("font", "15px sans-serif")
+        .style("font-weight", "bold");
+      svg.append("text")
+        .attr("text-anchor", "middle")
+        .attr("x", width - loc_from_right + w / 2)
+        .attr("y", loc_from_top + h * 2)
+        .text("Matchmaking Rating")
+        .style("font", "15px sans-serif")
+        .style("font-weight", "bold");
+
+      //*******************************ADD a colorbar End**********************************
+
+      //****************************Add Bubble Size Label *********************************
+      svg.append("circle")
+        .attr("cx", width - loc_from_right + 5)
+        .attr("cy", loc_from_top * 5)
+        .attr("r", 5)
+        .style("fill", "white")
+      svg.append("circle")
+        .attr("cx", width - loc_from_right + w - 30)
+        .attr("cy", loc_from_top * 5)
+        .attr("r", 30)
+        .style("fill", "white")
+      svg.append("text")
+        .attr("text-anchor", "middle")
+        .attr("x", width - loc_from_right + w / 2)
+        .attr("y", loc_from_top * 5 + h * 2)
+        .text("# of Matches")
+        .style("font", "15px sans-serif")
+        .style("font-weight", "bold");
+
+      function dragstarted(d) {
+        if (!d3.event.active) force.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+        d.fixed = true;
+      };
+
+      function dragged(d) {
+        d.fx = d3.event.x;
+        d.fy = d3.event.y;
+      };
+
+      function dragended(d) {
+        if (!d3.event.active) force.alphaTarget(0);
+        if (d.fixed == true) {
+          d.fx = d.x;
+          d.fy = d.y;
+        }
+        else {
+          d.fx = null;
+          d.fy = null;
+        }
+        //d3.select(this).style('fill', '#3182bd');
+        d3.select(this).select("circle").style("stroke-width", 6);
+        d3.select(this).select("circle").style("stroke", "orange");
+        d3.select(this).select("text").style("font", "25px sans-serif");
+        svg.selectAll("circle").filter(item => item != null && (item.name == this.__data__.property.freq_0 || item.name == this.__data__.property.freq_1 || item.name == this.__data__.property.freq_2))
+          .style("stroke-width", 3).style("stroke", "orange");
+        svg.selectAll("path").filter(item => (item.source.name == this.__data__.name && item.target.name == this.__data__.property.freq_0) ||
+          (item.target.name == this.__data__.name && item.source.name == this.__data__.property.freq_0)).style("stroke-width", 3).style("stroke", "red");
+        svg.selectAll("path").filter(item => (item.source.name == this.__data__.name && item.target.name == this.__data__.property.freq_1) ||
+          (item.target.name == this.__data__.name && item.source.name == this.__data__.property.freq_1)).style("stroke-width", 3).style("stroke", "red");
+        svg.selectAll("path").filter(item => (item.source.name == this.__data__.name && item.target.name == this.__data__.property.freq_2) ||
+          (item.target.name == this.__data__.name && item.source.name == this.__data__.property.freq_2)).style("stroke-width", 3).style("stroke", "red");
+      };
+
+      function doubleclicked(d) {
+        d.fixed = false;
+        d.fx = null;
+        d.fy = null;
+        d3.select(this).style('fill', function (d) { return colors(d.rank) });
+        d3.select(this).select("circle").style("stroke-width", 1.5);
+        d3.select(this).select("circle").style("stroke", "gray");
+        d3.select(this).select("text").style("font", "15px sans-serif");
+        svg.selectAll("circle").filter(item => item != null && (item.name == this.__data__.property.freq_0 || item.name == this.__data__.property.freq_1 || item.name == this.__data__.property.freq_2))
+          .style('fill', function (d) { return colors(d.rank); }).style("stroke-width", 1.5).style("stroke", "gray");
+        svg.selectAll("path").filter(item => (item.source.name == this.__data__.name && item.target.name == this.__data__.property.freq_0) ||
+          (item.target.name == this.__data__.name && item.source.name == this.__data__.property.freq_0)).style("stroke-width", 1.5).style("stroke", "gray");
+        svg.selectAll("path").filter(item => (item.source.name == this.__data__.name && item.target.name == this.__data__.property.freq_1) ||
+          (item.target.name == this.__data__.name && item.source.name == this.__data__.property.freq_1)).style("stroke-width", 1.5).style("stroke", "gray");
+        svg.selectAll("path").filter(item => (item.source.name == this.__data__.name && item.target.name == this.__data__.property.freq_2) ||
+          (item.target.name == this.__data__.name && item.source.name == this.__data__.property.freq_2)).style("stroke-width", 1.5).style("stroke", "gray");
+      }
+
+      function removeDups(myArray) {
+        myArray.sort();
+        for (var i = 1; i < myArray.length;) {
+          if (myArray[i - 1].source === myArray[i].source
+            && myArray[i - 1].target === myArray[i].target) {
+            myArray.splice(i, 1);
+          } else {
+            i++;
+          }
+        }
+        return myArray;
+      }
+
+      function dropdownChange() {
+        var d = d3.select(this).property('value');
+        svg.selectAll("circle").style('fill', function (d) { if (d != null) return colors(d.rank); else return "white" });
+        svg.selectAll("circle").style("stroke-width", 1.5);
+        svg.selectAll("circle").style("stroke", "gray");
+        svg.selectAll("path").style("stroke-width", 1.5).style("stroke", "gray");
+        svg.selectAll("text").style("font", "15px sans-serif").style("font-weight", "bold");
+        var data = svg.selectAll("circle").filter(item => item != null && item.name == d);
+        svg.selectAll("circle").filter(item => item != null && item.name == d).style("stroke-width", 6).style("stroke", "orange");
+        svg.selectAll("text").filter(item => item != null && item.name == d).style("font", "25px sans-serif");
+        svg.selectAll("circle").filter(item => item != null && (item.name == data._groups[0][0].__data__.property.freq_0 || item.name == data._groups[0][0].__data__.property.freq_1 || item.name == data._groups[0][0].__data__.property.freq_2))
+          .style("stroke-width", 3).style("stroke", "orange");
+        svg.selectAll("path").filter(item => (item.source.name == data._groups[0][0].__data__.name && item.target.name == data._groups[0][0].__data__.property.freq_0) ||
+          (item.target.name == data._groups[0][0].__data__.name && item.source.name == data._groups[0][0].__data__.property.freq_0)).style("stroke-width", 3).style("stroke", "red");
+        svg.selectAll("path").filter(item => (item.source.name == data._groups[0][0].__data__.name && item.target.name == data._groups[0][0].__data__.property.freq_1) ||
+          (item.target.name == data._groups[0][0].__data__.name && item.source.name == data._groups[0][0].__data__.property.freq_1)).style("stroke-width", 3).style("stroke", "red");
+        svg.selectAll("path").filter(item => (item.source.name == data._groups[0][0].__data__.name && item.target.name == data._groups[0][0].__data__.property.freq_2) ||
+          (item.target.name == data._groups[0][0].__data__.name && item.source.name == data._groups[0][0].__data__.property.freq_2)).style("stroke-width", 3).style("stroke", "red");
+      };
+
+    }
+
+  </script>
+</body>
+
+</html>
